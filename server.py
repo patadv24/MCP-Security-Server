@@ -4,6 +4,9 @@ from src.security_mcp.tools.ip import analyze_ip
 from src.security_mcp.tools.hash import analyze_hash
 from src.security_mcp.tools.dns import resolve_dns
 from src.security_mcp.tools.investigation import investigate_domain
+from src.security_mcp.logging_config import configure_logging
+
+configure_logging()
 
 mcp = MCPServer("Security MCP Server")
 

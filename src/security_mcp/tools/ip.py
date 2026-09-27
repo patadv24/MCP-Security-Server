@@ -1,4 +1,8 @@
 import ipaddress
+import logging
+
+
+logger = logging.getLogger(__name__)
 
 
 def analyze_ip(ip: str) -> dict:
@@ -7,7 +11,7 @@ def analyze_ip(ip: str) -> dict:
     try:
         address = ipaddress.ip_address(ip)
 
-        return {
+        result = {
             "ip": str(address),
             "valid": True,
             "version": f"IPv{address.version}",
@@ -17,7 +21,13 @@ def analyze_ip(ip: str) -> dict:
             "reserved": address.is_reserved,
         }
 
+        logger.info("IP analysis completed for %s", ip)
+
+        return result
+
     except ValueError:
+        logger.warning("Invalid IP address received: %s", ip)
+
         return {
             "ip": ip,
             "valid": False,

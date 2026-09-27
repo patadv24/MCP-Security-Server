@@ -1,5 +1,10 @@
+import logging
+
 from src.security_mcp.tools.dns import resolve_dns
 from src.security_mcp.tools.ip import analyze_ip
+
+
+logger = logging.getLogger(__name__)
 
 
 def investigate_domain(domain: str) -> dict:
@@ -8,6 +13,11 @@ def investigate_domain(domain: str) -> dict:
     dns_result = resolve_dns(domain)
 
     if not dns_result["valid"]:
+        logger.warning(
+            "Domain investigation failed for %s",
+            domain.strip(),
+        )
+
         return {
             "domain": domain.strip(),
             "valid": False,
@@ -22,6 +32,12 @@ def investigate_domain(domain: str) -> dict:
 
     for ip in dns_result["ipv6"]:
         ip_analysis.append(analyze_ip(ip))
+
+    logger.info(
+        "Domain investigation completed for %s: analyzed %d IPs",
+        domain,
+        len(ip_analysis),
+    )
 
     return {
         "domain": dns_result["domain"],

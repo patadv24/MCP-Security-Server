@@ -1,4 +1,8 @@
+import logging
 import re
+
+
+logger = logging.getLogger(__name__)
 
 
 HASH_PATTERNS = {
@@ -25,6 +29,12 @@ def analyze_hash(hash_value: str) -> dict:
     length = len(value)
 
     possible_algorithm = HASH_PATTERNS.get(length)
+
+    logger.info(
+        "Hash analysis completed: length=%d, possible_algorithm=%s",
+        length,
+        possible_algorithm,
+    )
 
     return {
         "hash": value,

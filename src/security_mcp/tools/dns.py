@@ -1,4 +1,8 @@
+import logging
 import socket
+
+
+logger = logging.getLogger(__name__)
 
 
 def resolve_dns(domain: str) -> dict:
@@ -31,6 +35,13 @@ def resolve_dns(domain: str) -> dict:
             else:
                 ipv4_addresses.add(address)
 
+        logger.info(
+            "DNS resolution completed for %s: IPv4=%d, IPv6=%d",
+            domain,
+            len(ipv4_addresses),
+            len(ipv6_addresses),
+        )
+
         return {
             "domain": domain,
             "valid": True,
@@ -39,6 +50,8 @@ def resolve_dns(domain: str) -> dict:
         }
 
     except socket.gaierror as error:
+        logger.warning("DNS resolution failed for %s", domain)
+
         return {
             "domain": domain,
             "valid": False,
