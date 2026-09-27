@@ -1,7 +1,7 @@
 from mcp.server import MCPServer
 
 from src.security_mcp.tools.ip import analyze_ip
-
+from src.security_mcp.tools.hash import analyze_hash
 
 mcp = MCPServer("Security MCP Server")
 
@@ -13,6 +13,7 @@ def hello_security(name: str) -> str:
 
 
 mcp.tool()(analyze_ip)
+mcp.tool()(analyze_hash)
 
 
 if __name__ == "__main__":
