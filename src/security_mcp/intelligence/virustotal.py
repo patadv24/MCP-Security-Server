@@ -22,13 +22,12 @@ def get_api_key() -> str:
 
     return api_key
 
-
-def get_ip_report(ip: str) -> dict:
-    """Retrieve a VirusTotal report for an IP address."""
+def _request_report(endpoint: str, indicator: str, label: str) -> dict:
+    """Request a VirusTotal report for an indicator."""
 
     api_key = get_api_key()
 
-    url = f"{VT_BASE_URL}/ip_addresses/{ip}"
+    url = f"{VT_BASE_URL}/{endpoint}/{indicator}"
 
     headers = {
         "x-apikey": api_key,
@@ -46,28 +45,54 @@ def get_ip_report(ip: str) -> dict:
 
         data = response.json()
 
-        logger.info("VirusTotal IP lookup completed for %s", ip)
+        logger.info(
+            "VirusTotal %s lookup completed",
+            label,
+        )
 
         return {
             "success": True,
             "source": "VirusTotal",
-            "indicator": ip,
+            "indicator": indicator,
             "data": data,
         }
 
     except requests.RequestException as error:
         logger.warning(
-            "VirusTotal IP lookup failed for %s: %s",
-            ip,
+            "VirusTotal %s lookup failed: %s",
+            label,
             error,
         )
 
         return {
             "success": False,
             "source": "VirusTotal",
-            "indicator": ip,
+            "indicator": indicator,
             "error": str(error),
         }
+
+    except ValueError as error:
+        logger.warning(
+            "VirusTotal %s returned invalid JSON: %s",
+            label,
+            error,
+        )
+
+        return {
+            "success": False,
+            "source": "VirusTotal",
+            "indicator": indicator,
+            "error": "VirusTotal returned invalid JSON",
+        }
+
+def get_ip_report(ip: str) -> dict:
+    """Retrieve a VirusTotal report for an IP address."""
+
+    return _request_report(
+        "ip_addresses",
+        ip,
+        "IP",
+    )
 
 
 def extract_ip_intelligence(report: dict) -> dict:
@@ -106,101 +131,21 @@ def extract_ip_intelligence(report: dict) -> dict:
 def get_domain_report(domain: str) -> dict:
     """Retrieve a VirusTotal report for a domain."""
 
-    api_key = get_api_key()
-
-    url = f"{VT_BASE_URL}/domains/{domain}"
-
-    headers = {
-        "x-apikey": api_key,
-        "accept": "application/json",
-    }
-
-    try:
-        response = requests.get(
-            url,
-            headers=headers,
-            timeout=10,
-        )
-
-        response.raise_for_status()
-
-        data = response.json()
-
-        logger.info(
-            "VirusTotal domain lookup completed for %s",
-            domain,
-        )
-
-        return {
-            "success": True,
-            "source": "VirusTotal",
-            "indicator": domain,
-            "data": data,
-        }
-
-    except requests.RequestException as error:
-        logger.warning(
-            "VirusTotal domain lookup failed for %s: %s",
-            domain,
-            error,
-        )
-
-        return {
-            "success": False,
-            "source": "VirusTotal",
-            "indicator": domain,
-            "error": str(error),
-        }
+    return _request_report(
+        "domains",
+        domain,
+        "domain",
+    )
 
 
 def get_hash_report(hash_value: str) -> dict:
     """Retrieve a VirusTotal report for a file hash."""
 
-    api_key = get_api_key()
-
-    url = f"{VT_BASE_URL}/files/{hash_value}"
-
-    headers = {
-        "x-apikey": api_key,
-        "accept": "application/json",
-    }
-
-    try:
-        response = requests.get(
-            url,
-            headers=headers,
-            timeout=10,
-        )
-
-        response.raise_for_status()
-
-        data = response.json()
-
-        logger.info(
-            "VirusTotal hash lookup completed for %s",
-            hash_value,
-        )
-
-        return {
-            "success": True,
-            "source": "VirusTotal",
-            "indicator": hash_value,
-            "data": data,
-        }
-
-    except requests.RequestException as error:
-        logger.warning(
-            "VirusTotal hash lookup failed for %s: %s",
-            hash_value,
-            error,
-        )
-
-        return {
-            "success": False,
-            "source": "VirusTotal",
-            "indicator": hash_value,
-            "error": str(error),
-        }
+    return _request_report(
+        "files",
+        hash_value,
+        "hash",
+    )
 
 def extract_domain_intelligence(report: dict) -> dict:
     """Extract useful security intelligence from a VirusTotal domain report."""

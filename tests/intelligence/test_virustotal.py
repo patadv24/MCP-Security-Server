@@ -296,3 +296,77 @@ def test_extract_hash_intelligence():
     assert result["type_description"] == "ASCII text"
     assert result["analysis_stats"]["suspicious"] == 1
     assert result["tags"] == ["text"]
+
+def test_request_report_invalid_json(monkeypatch):
+    class FakeResponse:
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            raise ValueError("Invalid JSON")
+
+    def fake_get(url, headers, timeout):
+        return FakeResponse()
+
+    monkeypatch.setenv("VT_API_KEY", "test-api-key")
+    monkeypatch.setattr(
+        virustotal.requests,
+        "get",
+        fake_get,
+    )
+
+    result = virustotal.get_ip_report("8.8.8.8")
+
+    assert result["success"] is False
+    assert result["source"] == "VirusTotal"
+    assert result["indicator"] == "8.8.8.8"
+    assert result["error"] == "VirusTotal returned invalid JSON"
+
+
+def test_request_report_timeout(monkeypatch):
+    def fake_get(url, headers, timeout):
+        raise virustotal.requests.Timeout("Request timed out")
+
+    monkeypatch.setenv("VT_API_KEY", "test-api-key")
+    monkeypatch.setattr(
+        virustotal.requests,
+        "get",
+        fake_get,
+    )
+
+    result = virustotal.get_domain_report("example.com")
+
+    assert result["success"] is False
+    assert result["source"] == "VirusTotal"
+    assert result["indicator"] == "example.com"
+    assert "Request timed out" in result["error"]
+
+
+def test_request_report_http_error(monkeypatch):
+    class FakeResponse:
+        def raise_for_status(self):
+            raise virustotal.requests.HTTPError(
+                "429 Too Many Requests"
+            )
+
+    def fake_get(url, headers, timeout):
+        return FakeResponse()
+
+    monkeypatch.setenv("VT_API_KEY", "test-api-key")
+    monkeypatch.setattr(
+        virustotal.requests,
+        "get",
+        fake_get,
+    )
+
+    result = virustotal.get_hash_report(
+        "5d41402abc4b2a76b9719d911017c592"
+    )
+
+    assert result["success"] is False
+    assert result["source"] == "VirusTotal"
+    assert (
+        result["indicator"]
+        == "5d41402abc4b2a76b9719d911017c592"
+    )
+    assert "429 Too Many Requests" in result["error"]
