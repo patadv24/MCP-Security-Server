@@ -36,8 +36,7 @@ def resolve_dns(domain: str) -> dict:
                 ipv4_addresses.add(address)
 
         logger.info(
-            "DNS resolution completed for %s: IPv4=%d, IPv6=%d",
-            domain,
+            "DNS resolution completed: IPv4=%d, IPv6=%d",
             len(ipv4_addresses),
             len(ipv6_addresses),
         )
@@ -50,7 +49,7 @@ def resolve_dns(domain: str) -> dict:
         }
 
     except socket.gaierror as error:
-        logger.warning("DNS resolution failed for %s", domain)
+        logger.warning("DNS resolution failed")
 
         return {
             "domain": domain,

@@ -14,8 +14,7 @@ def investigate_domain(domain: str) -> dict:
 
     if not dns_result["valid"]:
         logger.warning(
-            "Domain investigation failed for %s",
-            domain.strip(),
+            "Domain investigation failed"
         )
 
         return {
@@ -34,8 +33,7 @@ def investigate_domain(domain: str) -> dict:
         ip_analysis.append(analyze_ip(ip))
 
     logger.info(
-        "Domain investigation completed for %s: analyzed %d IPs",
-        domain,
+        "Domain investigation completed: analyzed %d IPs",
         len(ip_analysis),
     )
 

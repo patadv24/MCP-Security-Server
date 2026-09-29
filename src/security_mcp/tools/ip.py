@@ -21,12 +21,11 @@ def analyze_ip(ip: str) -> dict:
             "reserved": address.is_reserved,
         }
 
-        logger.info("IP analysis completed for %s", ip)
-
+        logger.info("IP analysis completed")
         return result
 
     except ValueError:
-        logger.warning("Invalid IP address received: %s", ip)
+        logger.warning("Invalid IP address received")
 
         return {
             "ip": ip,
