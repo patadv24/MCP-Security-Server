@@ -1,12 +1,55 @@
 from src.security_mcp.tools.indicator import analyze_indicator
 
 
-def test_ip_indicator():
+def test_ip_indicator(monkeypatch):
+    result = {
+        "success": True,
+        "source": "VirusTotal",
+        "indicator": "8.8.8.8",
+        "data": {},
+    }
+
+    intelligence = {
+        "reputation": 123,
+        "country": "US",
+        "continent": "NA",
+        "asn": 15169,
+        "as_owner": "Google LLC",
+        "network": "8.8.8.0/24",
+        "regional_internet_registry": "ARIN",
+        "analysis_stats": {
+            "malicious": 0,
+            "suspicious": 0,
+            "harmless": 80,
+            "undetected": 20,
+            "timeout": 0,
+        },
+        "last_analysis_date": 1234567890,
+        "tags": [],
+    }
+
+    monkeypatch.setattr(
+        "src.security_mcp.tools.indicator.get_ip_report",
+        lambda ip: result,
+    )
+
+    monkeypatch.setattr(
+        "src.security_mcp.tools.indicator.extract_ip_intelligence",
+        lambda report: intelligence,
+    )
+
     result = analyze_indicator("8.8.8.8")
 
     assert result["valid"] is True
     assert result["type"] == "ip"
     assert result["indicator"] == "8.8.8.8"
+
+    assert result["threat_intelligence"]["available"] is True
+    assert result["threat_intelligence"]["source"] == "VirusTotal"
+    assert (
+        result["threat_intelligence"]["data"]["reputation"]
+        == 123
+    )
 
 
 def test_hash_indicator():

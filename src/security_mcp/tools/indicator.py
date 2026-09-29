@@ -2,6 +2,11 @@ import ipaddress
 import logging
 import re
 
+from src.security_mcp.intelligence.virustotal import (
+    extract_ip_intelligence,
+    get_ip_report,
+)
+
 from src.security_mcp.tools.hash import analyze_hash
 from src.security_mcp.tools.ip import analyze_ip
 from src.security_mcp.tools.investigation import investigate_domain
@@ -55,11 +60,28 @@ def analyze_indicator(indicator: str) -> dict:
 
         logger.info("Indicator identified as IP: %s", value)
 
+        local_analysis = analyze_ip(value)
+
+        vt_report = get_ip_report(value)
+
+        if vt_report["success"]:
+            threat_intelligence = extract_ip_intelligence(vt_report)
+        else:
+            threat_intelligence = {
+                "available": False,
+                "error": vt_report["error"],
+            }
+
         return {
             "valid": True,
             "type": "ip",
             "indicator": value,
-            "analysis": analyze_ip(value),
+            "analysis": local_analysis,
+            "threat_intelligence": {
+                "source": "VirusTotal",
+                "available": vt_report["success"],
+                "data": threat_intelligence,
+            },
         }
 
     except ValueError:
