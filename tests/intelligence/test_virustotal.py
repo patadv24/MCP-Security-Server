@@ -128,3 +128,171 @@ def test_extract_ip_intelligence():
 
     assert result["last_analysis_date"] == 1234567890
     assert result["tags"] == ["cloud", "dns"]
+
+def test_get_domain_report_success(monkeypatch):
+    """Verify successful VirusTotal domain lookup."""
+
+    class FakeResponse:
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return {
+                "data": {
+                    "id": "example.com",
+                    "type": "domain",
+                    "attributes": {
+                        "reputation": 100,
+                    },
+                }
+            }
+
+    def fake_get(url, headers, timeout):
+        assert url == (
+            "https://www.virustotal.com/api/v3/"
+            "domains/example.com"
+        )
+        assert headers["x-apikey"] == "test-api-key"
+        assert timeout == 10
+
+        return FakeResponse()
+
+    monkeypatch.setenv("VT_API_KEY", "test-api-key")
+    monkeypatch.setattr(
+        virustotal.requests,
+        "get",
+        fake_get,
+    )
+
+    result = virustotal.get_domain_report("example.com")
+
+    assert result["success"] is True
+    assert result["source"] == "VirusTotal"
+    assert result["indicator"] == "example.com"
+
+
+def test_get_hash_report_success(monkeypatch):
+    """Verify successful VirusTotal hash lookup."""
+
+    hash_value = "5d41402abc4b2a76b9719d911017c592"
+
+    class FakeResponse:
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return {
+                "data": {
+                    "id": hash_value,
+                    "type": "file",
+                    "attributes": {
+                        "reputation": 50,
+                    },
+                }
+            }
+
+    def fake_get(url, headers, timeout):
+        assert url == (
+            "https://www.virustotal.com/api/v3/"
+            f"files/{hash_value}"
+        )
+        assert headers["x-apikey"] == "test-api-key"
+        assert timeout == 10
+
+        return FakeResponse()
+
+    monkeypatch.setenv("VT_API_KEY", "test-api-key")
+    monkeypatch.setattr(
+        virustotal.requests,
+        "get",
+        fake_get,
+    )
+
+    result = virustotal.get_hash_report(hash_value)
+
+    assert result["success"] is True
+    assert result["source"] == "VirusTotal"
+    assert result["indicator"] == hash_value
+
+def test_extract_domain_intelligence():
+    """Verify extraction of VirusTotal domain intelligence."""
+
+    fake_report = {
+        "data": {
+            "data": {
+                "attributes": {
+                    "reputation": 100,
+                    "categories": {
+                        "Example": "test"
+                    },
+                    "registrar": "Example Registrar",
+                    "creation_date": 1234567890,
+                    "first_seen_date": 1234567891,
+                    "jarm": "example-jarm",
+                    "last_analysis_stats": {
+                        "malicious": 0,
+                        "suspicious": 1,
+                        "harmless": 50,
+                        "undetected": 20,
+                        "timeout": 0,
+                    },
+                    "last_analysis_date": 1234567892,
+                    "tags": ["test"],
+                    "whois_date": 1234567893,
+                }
+            }
+        }
+    }
+
+    result = virustotal.extract_domain_intelligence(
+        fake_report
+    )
+
+    assert result["reputation"] == 100
+    assert result["registrar"] == "Example Registrar"
+    assert result["jarm"] == "example-jarm"
+    assert result["analysis_stats"]["suspicious"] == 1
+    assert result["tags"] == ["test"]
+
+
+def test_extract_hash_intelligence():
+    """Verify extraction of VirusTotal hash intelligence."""
+
+    fake_report = {
+        "data": {
+            "data": {
+                "attributes": {
+                    "md5": "5d41402abc4b2a76b9719d911017c592",
+                    "sha1": "test-sha1",
+                    "sha256": "test-sha256",
+                    "reputation": 50,
+                    "size": 12345,
+                    "type_description": "ASCII text",
+                    "magic": "ASCII text",
+                    "first_submission_date": 1234567890,
+                    "last_analysis_date": 1234567891,
+                    "last_analysis_stats": {
+                        "malicious": 0,
+                        "suspicious": 1,
+                        "harmless": 50,
+                        "undetected": 20,
+                        "timeout": 0,
+                    },
+                    "tags": ["text"],
+                }
+            }
+        }
+    }
+
+    result = virustotal.extract_hash_intelligence(
+        fake_report
+    )
+
+    assert result["md5"] == "5d41402abc4b2a76b9719d911017c592"
+    assert result["sha1"] == "test-sha1"
+    assert result["sha256"] == "test-sha256"
+    assert result["reputation"] == 50
+    assert result["size"] == 12345
+    assert result["type_description"] == "ASCII text"
+    assert result["analysis_stats"]["suspicious"] == 1
+    assert result["tags"] == ["text"]
