@@ -234,3 +234,97 @@ def test_analyze_indicator_hash_with_virustotal(monkeypatch):
         result["threat_intelligence"]["data"]["analysis_stats"]["malicious"]
         == 2
     )
+
+def test_indicator_normalizes_ip_whitespace(monkeypatch):
+    def fake_get_ip_report(ip):
+        assert ip == "8.8.8.8"
+        return {
+            "success": False,
+            "source": "VirusTotal",
+            "indicator": ip,
+            "error": "Test lookup failure",
+        }
+
+    monkeypatch.setattr(
+        "src.security_mcp.tools.indicator.get_ip_report",
+        fake_get_ip_report,
+    )
+
+    result = analyze_indicator("  8.8.8.8  ")
+
+    assert result["valid"] is True
+    assert result["type"] == "ip"
+    assert result["indicator"] == "8.8.8.8"
+
+def test_indicator_normalizes_domain():
+    result = analyze_indicator(
+        " EXAMPLE.COM. ",
+        external_lookup=False,
+    )
+
+    assert result["valid"] is True
+    assert result["type"] == "domain"
+    assert result["indicator"] == "example.com"
+
+def test_indicator_normalizes_hash(monkeypatch):
+    hash_value = "5D41402ABC4B2A76B9719D911017C592"
+
+    def fake_get_hash_report(value):
+        assert value == value.lower()
+
+        return {
+            "success": False,
+            "source": "VirusTotal",
+            "indicator": value,
+            "error": "Test lookup failure",
+        }
+
+    monkeypatch.setattr(
+        "src.security_mcp.tools.indicator.get_hash_report",
+        fake_get_hash_report,
+    )
+
+    result = analyze_indicator(hash_value)
+
+    assert result["valid"] is True
+    assert result["type"] == "hash"
+    assert result["indicator"] == hash_value.lower()
+
+def test_indicator_can_disable_external_lookup(monkeypatch):
+    def fail_if_called(indicator):
+        raise AssertionError(
+            "VirusTotal should not be called"
+        )
+
+    monkeypatch.setattr(
+        "src.security_mcp.tools.indicator.get_ip_report",
+        fail_if_called,
+    )
+
+    result = analyze_indicator(
+        "8.8.8.8",
+        external_lookup=False,
+    )
+
+    assert result["valid"] is True
+    assert result["type"] == "ip"
+    assert (
+        result["threat_intelligence"]["available"]
+        is False
+    )
+    assert (
+        result["threat_intelligence"]["data"]["error"]
+        == "External threat intelligence lookup disabled"
+    )
+
+def test_local_analysis_survives_disabled_external_lookup():
+    result = analyze_indicator(
+        "8.8.8.8",
+        external_lookup=False,
+    )
+
+    assert result["valid"] is True
+    assert result["analysis"]["ip"] == "8.8.8.8"
+    assert result["analysis"]["version"] == "IPv4"
+    assert result["threat_intelligence"]["available"] is False
+

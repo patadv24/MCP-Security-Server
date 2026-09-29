@@ -14,6 +14,7 @@ from src.security_mcp.tools.hash import analyze_hash
 from src.security_mcp.tools.ip import analyze_ip
 from src.security_mcp.tools.investigation import investigate_domain
 
+
 logger = logging.getLogger(__name__)
 
 
@@ -44,56 +45,81 @@ def is_valid_domain(domain: str) -> bool:
     return True
 
 
-def analyze_indicator(indicator: str) -> dict:
+def _unavailable_threat_intelligence(reason: str) -> dict:
+    """Return a consistent unavailable threat-intelligence result."""
+
+    return {
+        "source": "VirusTotal",
+        "available": False,
+        "data": {
+            "error": reason,
+        },
+    }
+
+
+def analyze_indicator(
+    indicator: str,
+    external_lookup: bool = True,
+) -> dict:
     """
-    Classify an indicator and enrich it with local
-    security analysis and VirusTotal intelligence.
+    Classify an indicator and perform local analysis.
+
+    VirusTotal enrichment can be disabled when the indicator
+    should not be submitted to an external intelligence service.
     """
 
     value = indicator.strip()
 
     if not value:
-     return {
-        "valid": False,
-        "type": "unknown",
-        "indicator": value,
-        "error": "Indicator cannot be empty",
-    }
+        return {
+            "valid": False,
+            "type": "unknown",
+            "indicator": value,
+            "error": "Indicator cannot be empty",
+        }
+
     # ---------------------------------------------------------
     # IP ADDRESS
     # ---------------------------------------------------------
 
     try:
-        ipaddress.ip_address(value)
+        address = ipaddress.ip_address(value)
+        normalized_value = str(address)
 
-        local_analysis = analyze_ip(value)
-        vt_report = get_ip_report(value)
+        local_analysis = analyze_ip(normalized_value)
 
-        if vt_report["success"]:
-            threat_intelligence = extract_ip_intelligence(
-                vt_report
-            )
+        if external_lookup:
+            vt_report = get_ip_report(normalized_value)
+
+            if vt_report["success"]:
+                threat_intelligence = {
+                    "source": "VirusTotal",
+                    "available": True,
+                    "data": extract_ip_intelligence(vt_report),
+                }
+            else:
+                threat_intelligence = {
+                    "source": "VirusTotal",
+                    "available": False,
+                    "data": {
+                        "error": vt_report["error"],
+                    },
+                }
         else:
-            threat_intelligence = {
-                "available": False,
-                "error": vt_report["error"],
-            }
+            threat_intelligence = _unavailable_threat_intelligence(
+                "External threat intelligence lookup disabled"
+            )
 
         logger.info(
-            "Indicator classified as IP: %s",
-            value,
+            "Indicator classified as IP",
         )
 
         return {
             "valid": True,
             "type": "ip",
-            "indicator": value,
+            "indicator": normalized_value,
             "analysis": local_analysis,
-            "threat_intelligence": {
-                "source": "VirusTotal",
-                "available": vt_report["success"],
-                "data": threat_intelligence,
-            },
+            "threat_intelligence": threat_intelligence,
         }
 
     except ValueError:
@@ -103,74 +129,88 @@ def analyze_indicator(indicator: str) -> dict:
     # HASH
     # ---------------------------------------------------------
 
-    hash_analysis = analyze_hash(value)
+    normalized_hash = value.lower()
+    hash_analysis = analyze_hash(normalized_hash)
 
     if (
         hash_analysis["valid_hex"]
         and hash_analysis["possible_algorithm"]
     ):
-        vt_report = get_hash_report(value)
+        if external_lookup:
+            vt_report = get_hash_report(normalized_hash)
 
-        if vt_report["success"]:
-            threat_intelligence = extract_hash_intelligence(
-                vt_report
-            )
+            if vt_report["success"]:
+                threat_intelligence = {
+                    "source": "VirusTotal",
+                    "available": True,
+                    "data": extract_hash_intelligence(vt_report),
+                }
+            else:
+                threat_intelligence = {
+                    "source": "VirusTotal",
+                    "available": False,
+                    "data": {
+                        "error": vt_report["error"],
+                    },
+                }
         else:
-            threat_intelligence = {
-                "available": False,
-                "error": vt_report["error"],
-            }
+            threat_intelligence = _unavailable_threat_intelligence(
+                "External threat intelligence lookup disabled"
+            )
 
         logger.info(
-            "Indicator classified as hash: %s",
-            value,
+            "Indicator classified as hash",
         )
 
         return {
             "valid": True,
             "type": "hash",
-            "indicator": value,
+            "indicator": normalized_hash,
             "analysis": hash_analysis,
-            "threat_intelligence": {
-                "source": "VirusTotal",
-                "available": vt_report["success"],
-                "data": threat_intelligence,
-            },
+            "threat_intelligence": threat_intelligence,
         }
 
     # ---------------------------------------------------------
     # DOMAIN
     # ---------------------------------------------------------
 
-    if is_valid_domain(value):
-        local_analysis = investigate_domain(value)
-        vt_report = get_domain_report(value)
+    normalized_domain = value.rstrip(".").lower()
 
-        if vt_report["success"]:
-            threat_intelligence = extract_domain_intelligence(
-                vt_report
-            )
+    if is_valid_domain(normalized_domain):
+        local_analysis = investigate_domain(normalized_domain)
+
+        if external_lookup:
+            vt_report = get_domain_report(normalized_domain)
+
+            if vt_report["success"]:
+                threat_intelligence = {
+                    "source": "VirusTotal",
+                    "available": True,
+                    "data": extract_domain_intelligence(vt_report),
+                }
+            else:
+                threat_intelligence = {
+                    "source": "VirusTotal",
+                    "available": False,
+                    "data": {
+                        "error": vt_report["error"],
+                    },
+                }
         else:
-            threat_intelligence = {
-                "available": False,
-                "error": vt_report["error"],
-            }
+            threat_intelligence = _unavailable_threat_intelligence(
+                "External threat intelligence lookup disabled"
+            )
 
         logger.info(
-            "Indicator classified as domain: %s",
-            value,
+            "Indicator classified as domain",
         )
 
         return {
             "valid": True,
             "type": "domain",
-            "indicator": value,
+            "indicator": normalized_domain,
             "analysis": local_analysis,
-            "threat_intelligence": {
-                "source": "VirusTotal",
-                "available": vt_report["success"],
-                "data": threat_intelligence,
-            },
+            "threat_intelligence": threat_intelligence,
         }
 
     # ---------------------------------------------------------
@@ -178,8 +218,7 @@ def analyze_indicator(indicator: str) -> dict:
     # ---------------------------------------------------------
 
     logger.warning(
-        "Unknown indicator type received: %s",
-        value,
+        "Unknown indicator type received",
     )
 
     return {
