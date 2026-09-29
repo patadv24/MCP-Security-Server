@@ -330,7 +330,7 @@ pytest
 Installation
 
 Clone the repository:
-git clone <YOUR-REPOSITORY-URL>
+git clone https://github.com/patadv24/MCP-Security-Server.git
 cd MCP-Security-Server
 
 Create a Virtual Environment:
