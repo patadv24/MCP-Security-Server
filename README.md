@@ -340,7 +340,7 @@ Activate it on Windows:
 .venv\Scripts\activate
 
 Install dpenedencies:
-pip install mcp requests python-dotenv pytest
+pip install -r requirements.txt
 
 
 
