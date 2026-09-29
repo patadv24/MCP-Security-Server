@@ -23,6 +23,35 @@ Only analyze systems, indicators, and data that you are authorized to investigat
 External threat-intelligence services may have their own terms, rate limits, privacy policies, and data-handling considerations.
 
 
+## MCP Inspector Validation
+
+The server was validated end-to-end using the MCP Inspector.
+
+The Inspector successfully connected to the local Security MCP Server over STDIO and executed the unified IOC analysis workflow.
+
+### Server Connection
+
+![MCP Inspector server connection](screenshots/01-inspector-connected.png)
+
+### IP Indicator Analysis
+
+The unified IOC analysis workflow was tested with `8.8.8.8`, combining local IP validation and VirusTotal enrichment into a structured response.
+
+![IP analysis](screenshots/02-ip-analysis.png)
+
+### Domain Indicator Analysis
+
+The workflow was tested with `example.com`, demonstrating domain classification, DNS resolution, IP analysis, and VirusTotal enrichment.
+
+![Domain analysis](screenshots/03-domain-analysis.png)
+
+### Hash Indicator Analysis
+
+The workflow was also tested with a known MD5 test value, demonstrating hash classification, metadata extraction, and VirusTotal enrichment.
+
+![Hash analysis](screenshots/04-hash-analysis.png)
+
+
 
 ### Core workflow
 
