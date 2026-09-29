@@ -68,3 +68,37 @@ def get_ip_report(ip: str) -> dict:
             "indicator": ip,
             "error": str(error),
         }
+
+
+def extract_ip_intelligence(report: dict) -> dict:
+    """Extract useful security intelligence from a VirusTotal IP report."""
+
+    attributes = report["data"]["data"]["attributes"]
+
+    analysis_stats = attributes.get(
+        "last_analysis_stats",
+        {},
+    )
+
+    return {
+        "reputation": attributes.get("reputation"),
+        "country": attributes.get("country"),
+        "continent": attributes.get("continent"),
+        "asn": attributes.get("asn"),
+        "as_owner": attributes.get("as_owner"),
+        "network": attributes.get("network"),
+        "regional_internet_registry": attributes.get(
+            "regional_internet_registry"
+        ),
+        "analysis_stats": {
+            "malicious": analysis_stats.get("malicious", 0),
+            "suspicious": analysis_stats.get("suspicious", 0),
+            "harmless": analysis_stats.get("harmless", 0),
+            "undetected": analysis_stats.get("undetected", 0),
+            "timeout": analysis_stats.get("timeout", 0),
+        },
+        "last_analysis_date": attributes.get(
+            "last_analysis_date"
+        ),
+        "tags": attributes.get("tags", []),
+    }

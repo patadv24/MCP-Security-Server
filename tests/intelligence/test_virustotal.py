@@ -80,3 +80,51 @@ def test_get_ip_report_http_error(monkeypatch):
     assert result["source"] == "VirusTotal"
     assert result["indicator"] == "8.8.8.8"
     assert "403 Client Error" in result["error"]
+
+
+def test_extract_ip_intelligence():
+    """Verify extraction of useful VirusTotal IP intelligence."""
+
+    fake_report = {
+        "data": {
+            "data": {
+                "attributes": {
+                    "reputation": 123,
+                    "country": "US",
+                    "continent": "NA",
+                    "asn": 15169,
+                    "as_owner": "Google LLC",
+                    "network": "8.8.8.0/24",
+                    "regional_internet_registry": "ARIN",
+                    "last_analysis_stats": {
+                        "malicious": 0,
+                        "suspicious": 1,
+                        "harmless": 80,
+                        "undetected": 20,
+                        "timeout": 0,
+                    },
+                    "last_analysis_date": 1234567890,
+                    "tags": ["cloud", "dns"],
+                }
+            }
+        }
+    }
+
+    result = virustotal.extract_ip_intelligence(fake_report)
+
+    assert result["reputation"] == 123
+    assert result["country"] == "US"
+    assert result["continent"] == "NA"
+    assert result["asn"] == 15169
+    assert result["as_owner"] == "Google LLC"
+    assert result["network"] == "8.8.8.0/24"
+    assert result["regional_internet_registry"] == "ARIN"
+
+    assert result["analysis_stats"]["malicious"] == 0
+    assert result["analysis_stats"]["suspicious"] == 1
+    assert result["analysis_stats"]["harmless"] == 80
+    assert result["analysis_stats"]["undetected"] == 20
+    assert result["analysis_stats"]["timeout"] == 0
+
+    assert result["last_analysis_date"] == 1234567890
+    assert result["tags"] == ["cloud", "dns"]
