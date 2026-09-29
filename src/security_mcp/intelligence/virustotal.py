@@ -22,6 +22,7 @@ def get_api_key() -> str:
 
     return api_key
 
+
 def _request_report(endpoint: str, indicator: str, label: str) -> dict:
     """Request a VirusTotal report for an indicator."""
 
@@ -71,11 +72,10 @@ def _request_report(endpoint: str, indicator: str, label: str) -> dict:
             "error": str(error),
         }
 
-    except ValueError as error:
+    except ValueError:
         logger.warning(
-            "VirusTotal %s returned invalid JSON: %s",
+            "VirusTotal %s returned invalid JSON",
             label,
-            error,
         )
 
         return {
@@ -85,6 +85,7 @@ def _request_report(endpoint: str, indicator: str, label: str) -> dict:
             "error": "VirusTotal returned invalid JSON",
         }
 
+
 def get_ip_report(ip: str) -> dict:
     """Retrieve a VirusTotal report for an IP address."""
 
@@ -93,6 +94,60 @@ def get_ip_report(ip: str) -> dict:
         ip,
         "IP",
     )
+
+
+def get_domain_report(domain: str) -> dict:
+    """Retrieve a VirusTotal report for a domain."""
+
+    return _request_report(
+        "domains",
+        domain,
+        "domain",
+    )
+
+
+def get_hash_report(hash_value: str) -> dict:
+    """Retrieve a VirusTotal report for a file hash."""
+
+    return _request_report(
+        "files",
+        hash_value,
+        "hash",
+    )
+
+
+def build_assessment(analysis_stats: dict) -> dict:
+    """Build normalized assessment metrics from VirusTotal statistics."""
+
+    malicious = analysis_stats.get("malicious", 0)
+    suspicious = analysis_stats.get("suspicious", 0)
+    harmless = analysis_stats.get("harmless", 0)
+    undetected = analysis_stats.get("undetected", 0)
+    timeout = analysis_stats.get("timeout", 0)
+
+    total_engines = (
+        malicious
+        + suspicious
+        + harmless
+        + undetected
+        + timeout
+    )
+
+    detection_ratio = (
+        (malicious + suspicious) / total_engines
+        if total_engines
+        else 0.0
+    )
+
+    return {
+        "malicious_detections": malicious,
+        "suspicious_detections": suspicious,
+        "harmless_detections": harmless,
+        "undetected_detections": undetected,
+        "timeout_detections": timeout,
+        "total_engines": total_engines,
+        "detection_ratio": round(detection_ratio, 4),
+    }
 
 
 def extract_ip_intelligence(report: dict) -> dict:
@@ -122,30 +177,13 @@ def extract_ip_intelligence(report: dict) -> dict:
             "undetected": analysis_stats.get("undetected", 0),
             "timeout": analysis_stats.get("timeout", 0),
         },
+        "assessment": build_assessment(analysis_stats),
         "last_analysis_date": attributes.get(
             "last_analysis_date"
         ),
         "tags": attributes.get("tags", []),
     }
 
-def get_domain_report(domain: str) -> dict:
-    """Retrieve a VirusTotal report for a domain."""
-
-    return _request_report(
-        "domains",
-        domain,
-        "domain",
-    )
-
-
-def get_hash_report(hash_value: str) -> dict:
-    """Retrieve a VirusTotal report for a file hash."""
-
-    return _request_report(
-        "files",
-        hash_value,
-        "hash",
-    )
 
 def extract_domain_intelligence(report: dict) -> dict:
     """Extract useful security intelligence from a VirusTotal domain report."""
@@ -171,12 +209,14 @@ def extract_domain_intelligence(report: dict) -> dict:
             "undetected": analysis_stats.get("undetected", 0),
             "timeout": analysis_stats.get("timeout", 0),
         },
+        "assessment": build_assessment(analysis_stats),
         "last_analysis_date": attributes.get(
             "last_analysis_date"
         ),
         "tags": attributes.get("tags", []),
         "whois_date": attributes.get("whois_date"),
     }
+
 
 def extract_hash_intelligence(report: dict) -> dict:
     """Extract useful security intelligence from a VirusTotal hash report."""
@@ -211,5 +251,6 @@ def extract_hash_intelligence(report: dict) -> dict:
             "undetected": analysis_stats.get("undetected", 0),
             "timeout": analysis_stats.get("timeout", 0),
         },
+        "assessment": build_assessment(analysis_stats),
         "tags": attributes.get("tags", []),
     }
