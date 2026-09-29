@@ -10,6 +10,33 @@ from src.security_mcp.tools.investigation import investigate_domain
 logger = logging.getLogger(__name__)
 
 
+def is_valid_domain(domain: str) -> bool:
+    """Validate the basic syntax of a domain name."""
+
+    if len(domain) > 253:
+        return False
+
+    if "." not in domain:
+        return False
+
+    labels = domain.rstrip(".").split(".")
+
+    if len(labels) < 2:
+        return False
+
+    for label in labels:
+        if not 1 <= len(label) <= 63:
+            return False
+
+        if label.startswith("-") or label.endswith("-"):
+            return False
+
+        if not re.fullmatch(r"[A-Za-z0-9-]+", label):
+            return False
+
+    return True
+
+
 def analyze_indicator(indicator: str) -> dict:
     """Identify an indicator and route it to the appropriate security analysis."""
 
@@ -38,7 +65,7 @@ def analyze_indicator(indicator: str) -> dict:
     except ValueError:
         pass
 
-    # Check whether the indicator looks like a hexadecimal hash.
+    # Check whether the indicator looks like a known hash format.
     if re.fullmatch(r"[0-9a-fA-F]+", value):
         hash_result = analyze_hash(value)
 
@@ -55,8 +82,8 @@ def analyze_indicator(indicator: str) -> dict:
                 "analysis": hash_result,
             }
 
-    # Treat remaining valid-looking values as domains.
-    if "." in value and " " not in value:
+    # Check whether the indicator has valid domain syntax.
+    if is_valid_domain(value):
         logger.info("Indicator identified as domain: %s", value)
 
         return {
