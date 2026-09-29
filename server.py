@@ -5,6 +5,7 @@ from src.security_mcp.tools.hash import analyze_hash
 from src.security_mcp.tools.dns import resolve_dns
 from src.security_mcp.tools.investigation import investigate_domain
 from src.security_mcp.logging_config import configure_logging
+from src.security_mcp.tools.indicator import analyze_indicator
 
 configure_logging()
 
@@ -21,6 +22,7 @@ mcp.tool()(analyze_ip)
 mcp.tool()(analyze_hash)
 mcp.tool()(resolve_dns)
 mcp.tool()(investigate_domain)
+mcp.tool()(analyze_indicator)
 
 if __name__ == "__main__":
     mcp.run()
